@@ -1,0 +1,25 @@
+// Modelo lógico (DBML) - cole em https://dbdiagram.io para gerar o diagrama
+Table usuarios {
+  id int [pk, increment]
+  nome varchar(80) [not null]
+  sobrenome varchar(80) [not null]
+  data_nascimento date [not null]
+  login varchar(50) [not null, unique]
+  senha_hash varchar(255) [not null, note: 'bcrypt']
+  is_admin tinyint(1) [not null, default: 0]
+  criado_em datetime [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table tarefas {
+  id int [pk, increment]
+  usuario_id int [not null]
+  titulo varchar(150) [not null]
+  descricao text
+  data_criacao datetime [not null, default: `CURRENT_TIMESTAMP`]
+  data_conclusao date [not null, note: 'prazo de conclusão']
+  status enum('em_aberto','concluida','em_atraso') [not null, default: 'em_aberto']
+
+  indexes { (usuario_id, status) }
+}
+
+Ref: tarefas.usuario_id > usuarios.id [delete: cascade]

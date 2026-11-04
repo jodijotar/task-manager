@@ -1,0 +1,22 @@
+%% Modelo Entidade-Relacionamento (Mermaid) - abra em https://mermaid.live
+erDiagram
+    USUARIOS ||--o{ TAREFAS : "possui"
+    USUARIOS {
+        int id PK
+        varchar nome
+        varchar sobrenome
+        date data_nascimento
+        varchar login UK
+        varchar senha_hash
+        tinyint is_admin
+        datetime criado_em
+    }
+    TAREFAS {
+        int id PK
+        int usuario_id FK
+        varchar titulo
+        text descricao
+        datetime data_criacao
+        date data_conclusao
+        enum status
+    }

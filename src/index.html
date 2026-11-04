@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><title>Login</title></head>
+<body class="bg-light">
+<div class="container" style="max-width:380px; margin-top:12vh">
+  <h1 class="h4 mb-3">Gerenciador de Tarefas</h1>
+  <form id="formLogin" class="card card-body">
+    <div id="msgLogin" class="alert alert-secondary py-2 d-none"></div>
+    <div class="mb-3"><label class="form-label">Login</label><input name="login" class="form-control" required autofocus></div>
+    <div class="mb-3"><label class="form-label">Senha</label><input name="senha" type="password" class="form-control" required></div>
+    <button class="btn btn-dark w-100">Entrar</button>
+    <button type="button" class="btn btn-link w-100 mt-2 text-dark" data-bs-toggle="modal" data-bs-target="#modalUsuario">Cadastrar novo usuário</button>
+  </form>
+</div>
+
+<div class="modal fade" id="modalUsuario" tabindex="-1"><div class="modal-dialog">
+  <form id="formUsuario" class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Novo usuário</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div id="msgUsuario" class="alert alert-secondary py-2 d-none"></div>
+      <div class="row g-2">
+        <div class="col-6"><label class="form-label">Nome</label><input name="nome" class="form-control" required></div>
+        <div class="col-6"><label class="form-label">Sobrenome</label><input name="sobrenome" class="form-control" required></div>
+        <div class="col-12"><label class="form-label">Data de nascimento</label><input name="data_nascimento" type="date" class="form-control" required></div>
+        <div class="col-6"><label class="form-label">Login</label><input name="login" class="form-control" minlength="3" required></div>
+        <div class="col-6"><label class="form-label">Senha</label><input name="senha" type="password" class="form-control" minlength="6" required></div>
+      </div>
+      <hr>
+      <p class="small text-muted mb-2">Autorização de administrador</p>
+      <div class="row g-2">
+        <div class="col-6"><input name="admin_login" class="form-control" placeholder="Login do admin" required></div>
+        <div class="col-6"><input name="admin_senha" type="password" class="form-control" placeholder="Senha do admin" required></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-dark">Cadastrar</button></div>
+  </form>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/common.js"></script>
+<script src="js/login.js"></script>
+</body></html>
