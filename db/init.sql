@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   login           VARCHAR(50)  NOT NULL,
   senha_hash      VARCHAR(255) NOT NULL,
   is_admin        TINYINT(1)   NOT NULL DEFAULT 0,
+  foto            VARCHAR(255) NULL,
   criado_em       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_usuarios_login (login)

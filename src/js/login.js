@@ -1,7 +1,6 @@
 if (getToken()) location.href = 'tarefas.html';
 
 const dados = $f => Object.fromEntries(new FormData($f[0]).entries());
-const msg = ($el, texto) => $el.text(texto).removeClass('d-none');
 
 $('#formLogin').on('submit', function (e) {
   e.preventDefault();

@@ -22,6 +22,7 @@ function logout() {
 function exigirLogin() { if (!getToken()) location.href = LOGIN_PAGE; }
 
 const esc = s => $('<div>').text(s == null ? '' : s).html();
+const msg = ($el, texto) => $el.text(texto).removeClass('d-none');
 function fmtData(s) {
   if (!s) return '';
   const [a, m, d] = s.substring(0, 10).split('-');

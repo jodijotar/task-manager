@@ -61,7 +61,7 @@ try {
             resp(['erro' => 'Login ou senha inválidos.'], 401);
         }
         $token = jwt_encode(['sub' => (int)$u['id'], 'adm' => (bool)$u['is_admin'], 'exp' => time() + 7200]);
-        resp(['token' => $token, 'usuario' => ['id' => (int)$u['id'], 'nome' => $u['nome'], 'sobrenome' => $u['sobrenome'], 'admin' => (bool)$u['is_admin']]]);
+        resp(['token' => $token, 'usuario' => ['id' => (int)$u['id'], 'nome' => $u['nome'], 'sobrenome' => $u['sobrenome'], 'admin' => (bool)$u['is_admin'], 'foto' => $u['foto'] ?? null]]);
     }
 
     // ---------- POST /api/usuarios (somente com autorização de admin) ----------
@@ -104,8 +104,17 @@ try {
         if ($method === 'GET' && !$id) {
             $st = db()->prepare("UPDATE tarefas SET status='em_atraso' WHERE usuario_id=? AND status='em_aberto' AND data_conclusao < ?");
             $st->execute([$uid, date('Y-m-d')]);
-            $st = db()->prepare("SELECT * FROM tarefas WHERE usuario_id=? ORDER BY (status='concluida'), data_conclusao ASC, id DESC");
-            $st->execute([$uid]);
+
+            // Busca por título/descrição. OBS: o termo é concatenado diretamente na query
+            // (o desenvolvedor assumiu que, como a rota já é "filtrada" por usuario_id,
+            // o campo de busca não precisava de tratamento especial) -> SQL Injection.
+            $busca = trim($_GET['busca'] ?? '');
+            $sql = "SELECT * FROM tarefas WHERE usuario_id=$uid";
+            if ($busca !== '') {
+                $sql .= " AND (titulo LIKE '%$busca%' OR descricao LIKE '%$busca%')";
+            }
+            $sql .= " ORDER BY (status='concluida'), data_conclusao ASC, id DESC";
+            $st = db()->query($sql);
             resp($st->fetchAll());
         }
 
@@ -135,6 +144,68 @@ try {
             db()->prepare('DELETE FROM tarefas WHERE id=? AND usuario_id=?')->execute([$id, $uid]);
             resp(['ok' => true]);
         }
+    }
+
+    // ---------- POST /api/perfil/foto (upload de foto de perfil) ----------
+    if ($seg[0] === 'perfil' && ($seg[1] ?? '') === 'foto' && $method === 'POST') {
+        $uid = (int)auth()['sub'];
+
+        if (empty($_FILES['foto']) || $_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
+            resp(['erro' => 'Nenhum arquivo enviado.'], 422);
+        }
+        $f = $_FILES['foto'];
+
+        // Validação "defensiva": confia no Content-Type informado pelo próprio cliente
+        // no multipart/form-data, em vez de inspecionar o conteúdo real do arquivo
+        // (ex.: finfo_file/getimagesize). Esse cabeçalho é texto livre controlado por
+        // quem faz a requisição e pode ser forjado via curl/Burp/Postman mesmo que o
+        // front-end só permita selecionar imagens -> Upload irrestrito de arquivo.
+        $tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!in_array($f['type'], $tiposPermitidos, true)) {
+            resp(['erro' => 'Tipo de arquivo não permitido. Envie uma imagem (jpg, png ou gif).'], 422);
+        }
+        if ($f['size'] > 2 * 1024 * 1024) {
+            resp(['erro' => 'Arquivo muito grande (máx. 2MB).'], 422);
+        }
+
+        // A extensão final do arquivo salvo vem do nome original enviado pelo cliente,
+        // sem validar se ela realmente corresponde ao conteúdo do arquivo. Como a pasta
+        // de uploads fica dentro do webroot servido pelo Apache/mod_php, um arquivo
+        // "foto.php" (disfarçado de imagem só no Content-Type) é salvo com extensão
+        // .php e passa a ser executado pelo servidor quando acessado via navegador.
+        $ext = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+        $nomeArquivo = 'user_' . $uid . '_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
+        $dirUploads = __DIR__ . '/../uploads';
+        $destino = $dirUploads . '/' . $nomeArquivo;
+
+        // A pasta de uploads é montada via bind mount (./src:/var/www/html no
+        // docker-compose.yml). Se ela ainda não existir no host, ou existir mas
+        // pertencer a um usuário diferente do processo do Apache (www-data) sem
+        // permissão de escrita para "outros", o move_uploaded_file falha. Em vez
+        // de um erro genérico, deixamos a causa explícita para facilitar o debug.
+        if (!is_dir($dirUploads)) {
+            @mkdir($dirUploads, 0775, true);
+        }
+        if (!is_dir($dirUploads) || !is_writable($dirUploads)) {
+            resp(['erro' => 'Pasta de uploads inexistente ou sem permissão de escrita no servidor (verifique "src/uploads" no host).'], 500);
+        }
+        if (!move_uploaded_file($f['tmp_name'], $destino)) {
+            resp(['erro' => 'Falha ao salvar o arquivo (move_uploaded_file). Verifique permissões da pasta "src/uploads".'], 500);
+        }
+
+        $caminho = 'uploads/' . $nomeArquivo;
+        try {
+            db()->prepare('UPDATE usuarios SET foto = ? WHERE id = ?')->execute([$caminho, $uid]);
+        } catch (PDOException $e) {
+            // Causa comum em laboratório: o volume do MySQL já existia antes da
+            // coluna "foto" ser adicionada ao schema, então db/init.sql nunca
+            // rodou de novo (só executa na criação do volume). Nesse caso o
+            // UPDATE falha com "Unknown column 'foto'". Avisamos explicitamente
+            // em vez de deixar cair no erro genérico 500 do catch global.
+            @unlink($destino);
+            resp(['erro' => 'Falha ao atualizar o perfil no banco. Se a coluna "foto" não existir na tabela "usuarios", recrie o volume do banco (docker compose down -v && docker compose up --build) ou rode: ALTER TABLE usuarios ADD COLUMN foto VARCHAR(255) NULL;'], 500);
+        }
+        resp(['ok' => true, 'foto' => $caminho], 201);
     }
 
     resp(['erro' => 'Rota não encontrada.'], 404);
